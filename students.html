@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Students — Xedu</title>
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg?v=1" />
+  <link rel="apple-touch-icon" href="assets/logo.png?v=6" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/site.css" />
+</head>
+<body>
+  <div class="bg-mesh" aria-hidden="true"></div>
+  <div class="bg-stars" aria-hidden="true"></div>
+  <div class="bg-sky" aria-hidden="true">
+    <div class="cloud cloud-1"></div>
+    <div class="cloud cloud-2"></div>
+    <div class="cloud cloud-3"></div>
+    <div class="cloud cloud-4"></div>
+    <div class="cloud cloud-5"></div>
+  </div>
+
+  <header class="site-header">
+    <div class="header-inner">
+      <a href="index.html" class="brand-link">
+        <img src="assets/logo.png" alt="Xedu" class="logo" width="68" height="46" />
+        <span class="brand-label"><span class="brand-title">Self Assessment Tool</span></span>
+      </a>
+      <nav class="nav"><a href="index.html">Home</a><a href="students.html" class="active">Students</a><a href="advisors.html">Advisors</a><a href="about.html">About</a></nav>
+      <div class="header-actions">
+        <a href="rewards.html" class="sparx-xp" aria-label="View rewards and levels">
+          <span class="sparx-level" aria-hidden="true"><span id="level">1</span></span>
+          <span class="sparx-xp-info">
+            <span class="sparx-xp-label"><strong id="xp-total">0</strong> XP</span>
+            <span class="sparx-xp-bar"><span class="sparx-xp-fill" id="xp-bar"></span></span>
+          </span>
+        </a>
+        <a href="assessment.html" class="btn-nav hide-mobile">Start Assessment</a>
+        <button class="menu-toggle" aria-label="Menu"><span></span><span></span><span></span></button>
+      </div>
+    </div>
+  </header>
+
+  <main class="page">
+    <section class="page-hero reveal reveal-hero">
+      <p class="hero-eyebrow">For students</p>
+      <h1>Understand your profile.<br /><span class="text-accent">Improve with clarity.</span></h1>
+      <p class="hero-lead">Whether you're in Grade 9 or preparing applications, get honest feedback on where you stand and what to do next.</p>
+    </section>
+
+    <section class="section container">
+      <div class="grid-3 reveal-stagger">
+        <article class="card reveal">
+          <div class="card-icon"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#icon-target"></use></svg></div>
+          <h3>University readiness</h3>
+          <p>Assess how competitive you are for your target universities and what gaps to close.</p>
+        </article>
+        <article class="card reveal">
+          <div class="card-icon"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#icon-scale"></use></svg></div>
+          <h3>Balance check</h3>
+          <p>See if you're balancing academics and extracurriculars effectively.</p>
+        </article>
+        <article class="card reveal">
+          <div class="card-icon"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#icon-compass"></use></svg></div>
+          <h3>Path finding</h3>
+          <p>Explore medicine, STEM, humanities, or leadership — get advice tailored to your goal.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section container">
+      <div class="split">
+        <div class="split-visual reveal reveal-left" aria-hidden="true"><svg class="icon"><use href="assets/icons.svg#icon-chart"></use></svg></div>
+        <div class="reveal reveal-right">
+          <p class="section-label">Example questions</p>
+          <h2 class="section-title">Ask what matters to you</h2>
+          <div class="prose">
+            <ul>
+              <li>How competitive am I for top universities?</li>
+              <li>Am I showing enough leadership?</li>
+              <li>How can I improve my profile for medicine?</li>
+              <li>How can I become a stronger STEM applicant?</li>
+            </ul>
+          </div>
+        <a href="assessment.html" class="btn btn-primary btn-lg mt-4">Start your assessment</a>
+        </div>
+      </div>
+    </section>
+
+    <div class="cta-banner reveal">
+      <div class="cta-banner-inner reveal-scale">
+        <h2>Free. Fast. Personalised.</h2>
+        <p>Complete your self-assessment in under 15 minutes.</p>
+        <a href="assessment.html" class="btn btn-white btn-lg">Get started</a>
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-grid">
+      <div class="footer-brand"><img src="assets/logo.png" alt="Xedu" class="logo" width="68" height="46" /><p>Personalised guidance for students on their journey to university.</p></div>
+      <div class="footer-col"><h4>Product</h4><a href="assessment.html">Self-Assessment</a><a href="students.html">Students</a><a href="advisors.html">Advisors</a></div>
+      <div class="footer-col"><h4>Company</h4><a href="about.html">About</a><a href="https://xedu.app" target="_blank" rel="noopener">xedu.app</a></div>
+      <div class="footer-col"><h4>Get started</h4><a href="assessment.html">Start Assessment</a></div>
+    </div>
+    <div class="footer-bottom container">© 2026 Xedu. All rights reserved.</div>
+  </footer>
+
+  <script src="js/xp.js" defer></script>
+  <script src="js/layout.js" defer></script>
+</body>
+</html>

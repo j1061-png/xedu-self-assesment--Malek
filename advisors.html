@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Advisors — Xedu</title>
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg?v=1" />
+  <link rel="apple-touch-icon" href="assets/logo.png?v=6" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/site.css" />
+</head>
+<body>
+  <div class="bg-mesh" aria-hidden="true"></div>
+  <div class="bg-stars" aria-hidden="true"></div>
+  <div class="bg-sky" aria-hidden="true">
+    <div class="cloud cloud-1"></div>
+    <div class="cloud cloud-2"></div>
+    <div class="cloud cloud-3"></div>
+    <div class="cloud cloud-4"></div>
+    <div class="cloud cloud-5"></div>
+  </div>
+
+  <header class="site-header">
+    <div class="header-inner">
+      <a href="index.html" class="brand-link">
+        <img src="assets/logo.png" alt="Xedu" class="logo" width="68" height="46" />
+        <span class="brand-label"><span class="brand-title">Self Assessment Tool</span></span>
+      </a>
+      <nav class="nav"><a href="index.html">Home</a><a href="students.html">Students</a><a href="advisors.html" class="active">Advisors</a><a href="about.html">About</a></nav>
+      <div class="header-actions">
+        <a href="rewards.html" class="sparx-xp" aria-label="View rewards and levels">
+          <span class="sparx-level" aria-hidden="true"><span id="level">1</span></span>
+          <span class="sparx-xp-info">
+            <span class="sparx-xp-label"><strong id="xp-total">0</strong> XP</span>
+            <span class="sparx-xp-bar"><span class="sparx-xp-fill" id="xp-bar"></span></span>
+          </span>
+        </a>
+        <a href="assessment.html" class="btn-nav hide-mobile">Start Assessment</a>
+        <button class="menu-toggle" aria-label="Menu"><span></span><span></span><span></span></button>
+      </div>
+    </div>
+  </header>
+
+  <main class="page">
+    <section class="page-hero reveal reveal-hero">
+      <p class="hero-eyebrow">For advisors</p>
+      <h1>Help students reflect<br /><span class="text-accent">before you meet.</span></h1>
+      <p class="hero-lead">Give students a structured starting point. They arrive with context, self-awareness, and specific questions — so your sessions go deeper.</p>
+    </section>
+
+    <section class="section container">
+      <div class="grid-3 reveal-stagger">
+        <article class="card reveal">
+          <div class="card-icon"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#icon-clipboard"></use></svg></div>
+          <h3>Structured intake</h3>
+          <p>Students complete a guided chat and form covering academics, extracurriculars, and goals before advising sessions.</p>
+        </article>
+        <article class="card reveal">
+          <div class="card-icon"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#icon-bot"></use></svg></div>
+          <h3>AI-first triage</h3>
+          <p>Initial feedback helps students identify strengths and gaps, freeing you to focus on strategy and nuance.</p>
+        </article>
+        <article class="card reveal">
+          <div class="card-icon"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#icon-clock"></use></svg></div>
+          <h3>Save time</h3>
+          <p>Reduce repetitive intake conversations. Students come prepared with a clear assessment focus.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section container-narrow content-block">
+      <div class="prose reveal">
+        <h2>How advisors use Xedu</h2>
+        <p>Recommend the self-assessment tool to students before your first meeting. They'll chat with the AI advisor, complete a structured profile, and receive a summary of strengths, biggest gaps, and a recommended next step.</p>
+        <p>You can then build on that foundation with personalised counselling, application strategy, and long-term planning.</p>
+        <a href="https://xedu.app" class="btn btn-outline" target="_blank" rel="noopener" style="margin-top:1rem">Visit xedu.app →</a>
+      </div>
+    </section>
+
+    <div class="cta-banner reveal">
+      <div class="cta-banner-inner reveal-scale">
+        <h2>Share with your students</h2>
+        <p>Direct them to the free self-assessment tool today.</p>
+        <a href="assessment.html" class="btn btn-white btn-lg">Assessment link</a>
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-grid">
+      <div class="footer-brand"><img src="assets/logo.png" alt="Xedu" class="logo" width="68" height="46" /><p>Personalised guidance for students on their journey to university.</p></div>
+      <div class="footer-col"><h4>Product</h4><a href="assessment.html">Self-Assessment</a><a href="students.html">Students</a><a href="advisors.html">Advisors</a></div>
+      <div class="footer-col"><h4>Company</h4><a href="about.html">About</a><a href="https://xedu.app" target="_blank" rel="noopener">xedu.app</a></div>
+      <div class="footer-col"><h4>Get started</h4><a href="assessment.html">Start Assessment</a></div>
+    </div>
+    <div class="footer-bottom container">© 2026 Xedu. All rights reserved.</div>
+  </footer>
+
+  <script src="js/xp.js" defer></script>
+  <script src="js/layout.js" defer></script>
+</body>
+</html>

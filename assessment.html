@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Self-Assessment — Xedu</title>
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg?v=2" />
+  <link rel="apple-touch-icon" href="assets/logo.png?v=7" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/site.css?v=7" />
+  <link rel="stylesheet" href="css/app.css?v=7" />
+</head>
+<body>
+  <div class="bg-mesh" aria-hidden="true"></div>
+  <div class="bg-stars" aria-hidden="true"></div>
+  <div class="bg-sky" aria-hidden="true">
+    <div class="cloud cloud-1"></div>
+    <div class="cloud cloud-2"></div>
+    <div class="cloud cloud-3"></div>
+    <div class="cloud cloud-4"></div>
+    <div class="cloud cloud-5"></div>
+  </div>
+
+  <header class="site-header">
+    <div class="header-inner">
+      <a href="index.html" class="brand-link">
+        <img src="assets/logo.png" alt="Xedu" class="logo" width="68" height="46" />
+        <span class="brand-label"><span class="brand-title">Self Assessment Tool</span></span>
+      </a>
+      <nav class="nav"><a href="index.html">Home</a><a href="students.html">Students</a><a href="advisors.html">Advisors</a><a href="about.html">About</a></nav>
+      <div class="header-actions">
+        <a href="rewards.html" class="sparx-xp" aria-label="View rewards and levels">
+          <span class="sparx-level" aria-hidden="true"><span id="level">1</span></span>
+          <span class="sparx-xp-info">
+            <span class="sparx-xp-label"><strong id="xp-total">0</strong> XP</span>
+            <span class="sparx-xp-bar"><span class="sparx-xp-fill" id="xp-bar"></span></span>
+          </span>
+        </a>
+        <a href="assessment.html" class="btn-nav hide-mobile">Start Assessment</a>
+        <button class="menu-toggle" aria-label="Menu"><span></span><span></span><span></span></button>
+      </div>
+    </div>
+  </header>
+
+  <main class="page app-page">
+    <div class="app-wrap">
+      <section id="phase-assessment" class="phase active">
+        <nav class="steps steps-panel" aria-label="Progress">
+          <div class="step active" data-step="assessment">
+            <span class="step-num">1</span>
+            <span class="step-text"><strong>Questions</strong><small>Answer all 7</small></span>
+          </div>
+          <div class="step" data-step="results">
+            <span class="step-num">2</span>
+            <span class="step-text"><strong>Results</strong><small>Your AI assessment</small></span>
+          </div>
+          <div class="step" data-step="feedback">
+            <span class="step-num">3</span>
+            <span class="step-text"><strong>Feedback</strong><small>Ask Xedu anything</small></span>
+          </div>
+        </nav>
+        <div class="quiz-shell">
+          <div class="quiz-intro">
+            <h2>Your 7 assessment questions</h2>
+            <p>Questions appear one-by-one. Answer each, then continue.</p>
+          </div>
+          <div class="quiz-progress-wrap">
+            <div class="quiz-progress-meta">
+              <span id="quiz-counter">Question 1 of 7</span>
+              <span id="quiz-percent-label">0% complete</span>
+            </div>
+            <div class="quiz-progress-bar"><div class="quiz-progress-fill" id="quiz-progress-fill"></div></div>
+          </div>
+
+          <div id="quiz-error" class="alert alert-error hidden" role="alert"></div>
+
+          <div class="quiz-card" id="quiz-card">
+            <p class="quiz-step-label" id="quiz-step-label">Question 1</p>
+            <h2 class="quiz-title" id="quiz-title"></h2>
+            <p class="quiz-subtitle" id="quiz-subtitle"></p>
+            <div class="quiz-body" id="quiz-body">
+              <textarea
+                id="quiz-input"
+                class="quiz-textarea quiz-textarea-short"
+                rows="4"
+                placeholder="Type your answer…"
+                autocomplete="off"
+                spellcheck="true"
+              ></textarea>
+            </div>
+          </div>
+
+          <div class="quiz-nav">
+            <button type="button" id="quiz-back" class="btn btn-outline quiz-back hidden">← Back</button>
+            <button type="button" id="quiz-next" class="btn btn-primary quiz-next">Next →</button>
+          </div>
+
+          <div id="quiz-loading" class="quiz-loading hidden">
+            <div class="spinner-lg"></div>
+            <p>Analyzing your answers with AI…</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="phase-results" class="phase">
+        <nav class="steps steps-panel" aria-label="Progress">
+          <div class="step done" data-step="assessment">
+            <span class="step-num">1</span>
+            <span class="step-text"><strong>Questions</strong><small>Answer all 7</small></span>
+          </div>
+          <div class="step active" data-step="results">
+            <span class="step-num">2</span>
+            <span class="step-text"><strong>Results</strong><small>Your AI assessment</small></span>
+          </div>
+          <div class="step" data-step="feedback">
+            <span class="step-num">3</span>
+            <span class="step-text"><strong>Feedback</strong><small>Ask Xedu anything</small></span>
+          </div>
+        </nav>
+        <div class="results-shell center">
+          <div class="score-ring-wrap">
+            <svg class="score-ring" viewBox="0 0 120 120" aria-hidden="true">
+              <circle class="score-ring-bg" cx="60" cy="60" r="52" />
+              <circle class="score-ring-fill" id="score-ring-fill" cx="60" cy="60" r="52" />
+            </svg>
+            <div class="score-ring-text">
+              <span class="score-percent" id="score-percent">0%</span>
+              <span class="score-label" id="score-label">Assessment Score</span>
+            </div>
+          </div>
+          <div class="badge-xp" id="xp-earned-badge">+150 XP earned</div>
+          <h2 id="results-title">Your Assessment</h2>
+          <p id="results-focus" class="sub"></p>
+          <p class="score-breakdown" id="score-breakdown"></p>
+        </div>
+        <div class="panel-box result-block result-summary-block"><h3>Overview</h3><p id="result-summary"></p></div>
+        <h3 class="label-section">What's Working Well</h3>
+        <div id="strengths-grid" class="strengths-grid"></div>
+        <div class="panel-box result-block result-gap"><h3>Biggest Gap</h3><p id="result-gap"></p></div>
+        <div class="panel-box result-block result-cta"><h3>Your Next Step</h3><p id="result-next-step" class="emphasis"></p><p class="sub">Do this within the next 7 days.</p></div>
+        <div class="center results-actions">
+          <button type="button" id="feedback-btn" class="btn btn-primary">Ask Xedu for feedback →</button>
+          <button type="button" id="restart-btn" class="btn btn-outline">Start Over</button>
+        </div>
+      </section>
+
+      <section id="phase-feedback" class="phase">
+        <div class="chat-layout" id="chat-layout">
+          <nav class="steps steps-chat" aria-label="Progress">
+            <div class="step done" data-step="assessment">
+              <span class="step-num">1</span>
+              <span class="step-text"><strong>Questions</strong><small>Answer all 7</small></span>
+            </div>
+            <div class="step done" data-step="results">
+              <span class="step-num">2</span>
+              <span class="step-text"><strong>Results</strong><small>Your AI assessment</small></span>
+            </div>
+            <div class="step active" data-step="feedback">
+              <span class="step-num">3</span>
+              <span class="step-text"><strong>Feedback</strong><small>Ask Xedu anything</small></span>
+            </div>
+          </nav>
+
+          <div class="chat-main" id="chat-main">
+            <div class="chat-thread">
+              <div class="chat-messages" id="chat-messages" role="log" aria-live="polite"></div>
+            </div>
+          </div>
+
+          <div class="chat-footer">
+            <div id="chat-error" class="alert alert-error chat-error hidden" role="alert"></div>
+            <div class="chat-compose">
+              <div class="chat-compose-box">
+                <textarea id="chat-input" rows="2" placeholder="Ask about your results, next steps, or anything else…" aria-label="Message Xedu"></textarea>
+                <button type="button" id="chat-send" class="chat-send-btn" aria-label="Send message">
+                  <svg class="chat-send-icon chat-send-icon--send" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg>
+                </button>
+              </div>
+              <p class="chat-disclaimer">Xedu provides guidance — always verify important decisions with a counselor.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script src="js/xp.js?v=7" defer></script>
+  <script src="js/layout.js?v=7" defer></script>
+  <script src="js/questions.js?v=7" defer></script>
+  <script src="js/app.js?v=7" defer></script>
+</body>
+</html>
