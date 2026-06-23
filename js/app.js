@@ -5,11 +5,15 @@ const App = {
   lastResult: null,
   quizIndex: 0,
   quizAnswers: {},
+  speechSupported: false,
+  recognizers: { quiz: null, chat: null },
+  activeRecognizer: null,
 
   init() {
     this.bindQuiz();
     this.bindFeedback();
     this.bindRestart();
+    this.setupSpeechInput();
     this.quizIndex = 0;
     this.quizAnswers = {};
     this.renderQuestion();
@@ -21,6 +25,7 @@ const App = {
   },
 
   goToPhase(name) {
+    if (this.activeRecognizer) this.stopAllSpeech();
     document.querySelectorAll(".phase").forEach((p) => p.classList.remove("active"));
     document.getElementById(`phase-${name}`)?.classList.add("active");
     document.body.classList.toggle("chat-mode", name === "feedback");
@@ -39,6 +44,116 @@ const App = {
     document.getElementById("quiz-next")?.addEventListener("click", () => this.quizNext());
     document.getElementById("quiz-back")?.addEventListener("click", () => this.quizBack());
     document.getElementById("quiz-input")?.addEventListener("input", () => this.hideQuizError());
+    document.getElementById("quiz-voice-btn")?.addEventListener("click", () => this.toggleSpeech("quiz"));
+  },
+
+  setupSpeechInput() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    this.speechSupported = Boolean(SpeechRecognition);
+
+    if (!this.speechSupported) {
+      ["quiz-voice-btn", "chat-voice-btn"].forEach((id) => {
+        const btn = document.getElementById(id);
+        if (!btn) return;
+        btn.disabled = true;
+        btn.title = "Voice input not supported in this browser";
+      });
+      return;
+    }
+
+    this.recognizers.quiz = this.createRecognizer("quiz", "quiz-input", "quiz-voice-btn");
+    this.recognizers.chat = this.createRecognizer("chat", "chat-input", "chat-voice-btn");
+  },
+
+  createRecognizer(kind, inputId, buttonId) {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const rec = new SpeechRecognition();
+    rec.lang = "en-US";
+    rec.continuous = true;
+    rec.interimResults = true;
+
+    rec.onstart = () => {
+      const input = document.getElementById(inputId);
+      rec._baseValue = input?.value.trim() || "";
+      this.activeRecognizer = kind;
+      document.getElementById(buttonId)?.classList.add("listening");
+      document.getElementById(buttonId)?.setAttribute("aria-pressed", "true");
+    };
+
+    rec.onend = () => {
+      document.getElementById(buttonId)?.classList.remove("listening");
+      document.getElementById(buttonId)?.setAttribute("aria-pressed", "false");
+      if (this.activeRecognizer === kind) this.activeRecognizer = null;
+    };
+
+    rec.onerror = (event) => {
+      if (event?.error === "aborted") return;
+      const msg =
+        event?.error === "not-allowed" || event?.error === "service-not-allowed"
+          ? "Microphone permission is blocked. Allow mic access, then try again."
+          : "Voice input failed. Please try again.";
+      this.showVoiceError(kind, msg);
+    };
+
+    rec.onresult = (event) => {
+      const input = document.getElementById(inputId);
+      if (!input) return;
+
+      const base = rec._baseValue || "";
+      let finalTranscript = "";
+      let interimTranscript = "";
+      for (let i = 0; i < event.results.length; i += 1) {
+        const result = event.results[i];
+        if (result.isFinal) {
+          finalTranscript += result[0].transcript + " ";
+        } else {
+          interimTranscript += result[0].transcript + " ";
+        }
+      }
+      const chunk = `${finalTranscript}${interimTranscript}`.trim();
+      if (!chunk) return;
+
+      input.value = `${base}${base ? " " : ""}${chunk}`.trim();
+      if (kind === "quiz") this.hideQuizError();
+      if (kind === "chat") this.updateComposeState();
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    };
+
+    return rec;
+  },
+
+  toggleSpeech(kind) {
+    if (!this.speechSupported) return;
+
+    if (this.activeRecognizer && this.activeRecognizer !== kind) {
+      this.recognizers[this.activeRecognizer]?.stop();
+    }
+
+    const rec = this.recognizers[kind];
+    if (!rec) return;
+
+    if (this.activeRecognizer === kind) {
+      rec.stop();
+    } else {
+      try {
+        rec.start();
+      } catch (err) {
+        this.showVoiceError(kind, "Voice input could not start. Please click mic again.");
+      }
+    }
+  },
+
+  stopAllSpeech() {
+    Object.values(this.recognizers).forEach((rec) => rec?.stop());
+    this.activeRecognizer = null;
+  },
+
+  showVoiceError(kind, message) {
+    if (kind === "quiz") {
+      this.showQuizError(message);
+      return;
+    }
+    this.showChatError(message);
   },
 
   currentQuestion() {
@@ -114,12 +229,15 @@ const App = {
 
     const body = document.getElementById("quiz-body");
     const ta = document.getElementById("quiz-input");
+    const voiceBtn = document.getElementById("quiz-voice-btn");
     const saved = this.quizAnswers[q.field] || "";
 
     body?.querySelector(".quiz-options")?.remove();
 
     if (q.type === "choice") {
+      if (this.activeRecognizer === "quiz") this.recognizers.quiz?.stop();
       if (ta) ta.classList.add("hidden");
+      if (voiceBtn) voiceBtn.disabled = true;
       const opts = document.createElement("div");
       opts.className = "quiz-options";
       q.options.forEach((opt) => {
@@ -144,6 +262,7 @@ const App = {
       ta.classList.remove("hidden");
       ta.disabled = false;
       ta.readOnly = false;
+      if (voiceBtn) voiceBtn.disabled = !this.speechSupported;
       requestAnimationFrame(() => ta.focus());
     }
 
@@ -207,6 +326,7 @@ const App = {
     const input = document.getElementById("chat-input");
     document.getElementById("chat-send")?.addEventListener("click", () => this.sendFeedback());
     document.getElementById("feedback-btn")?.addEventListener("click", () => this.startFeedback());
+    document.getElementById("chat-voice-btn")?.addEventListener("click", () => this.toggleSpeech("chat"));
     input?.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
@@ -417,6 +537,7 @@ Next step: ${result.nextStep || ""}`;
 
   bindRestart() {
     document.getElementById("restart-btn")?.addEventListener("click", () => {
+      this.stopAllSpeech();
       this.feedbackHistory = [];
       this.assessmentContext = "";
       this.lastResult = null;

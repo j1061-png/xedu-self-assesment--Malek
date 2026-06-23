@@ -74,6 +74,10 @@
   z-index: 2;
 }
 
+#phase-assessment.active .quiz-body .quiz-textarea {
+  padding-right: 3.2rem;
+}
+
 #phase-assessment.active .quiz-nav {
   position: static;
   padding: 1rem 0 calc(.5rem + env(safe-area-inset-bottom, 0px));
@@ -477,6 +481,53 @@ body.chat-mode .chat-compose {
 }
 .chat-compose-box textarea:focus { outline: none; }
 .chat-compose-box textarea::placeholder { color: var(--dim); }
+
+.voice-btn {
+  flex-shrink: 0;
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgba(7, 56, 97, 0.2);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--primary);
+  font-size: 1.05rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background .15s, border-color .15s, transform .15s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.voice-icon {
+  width: 18px;
+  height: 18px;
+  pointer-events: none;
+}
+
+.voice-btn:hover:not(:disabled) {
+  background: #fff;
+  border-color: rgba(7, 56, 97, 0.35);
+  transform: translateY(-1px);
+}
+
+.voice-btn:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+.voice-btn.listening {
+  background: #073861;
+  color: #fff;
+  border-color: #073861;
+}
+
+.quiz-voice-btn {
+  position: absolute;
+  right: .7rem;
+  bottom: .7rem;
+  z-index: 8;
+}
 
 .chat-send-btn {
   flex-shrink: 0;
