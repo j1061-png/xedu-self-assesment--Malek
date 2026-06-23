@@ -20,6 +20,64 @@
 }
 
 /* Quiz phase — room to write */
+#phase-assessment.active .pre-assessment-card {
+  max-width: 720px;
+  margin: 0 auto 1.25rem;
+  background: #fff;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: 1.35rem 1.25rem;
+}
+
+#phase-assessment.active .pre-assessment-card h2 {
+  font-size: 1.2rem;
+  margin-bottom: .35rem;
+}
+
+#phase-assessment.active .pre-assessment-sub {
+  color: var(--muted);
+  font-size: .92rem;
+  margin-bottom: 1rem;
+}
+
+.pre-assessment-label {
+  display: block;
+  font-size: .9rem;
+  font-weight: 600;
+  color: var(--ink-2);
+  margin: .8rem 0 .4rem;
+}
+
+.pre-assessment-input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1.5px solid var(--border-light);
+  border-radius: 10px;
+  padding: .72rem .85rem;
+  font: inherit;
+  font-size: .98rem;
+  background: #fff;
+  color: var(--ink);
+}
+
+.pre-assessment-textarea {
+  resize: vertical;
+  min-height: 110px;
+}
+
+.pre-assessment-input:focus {
+  outline: none;
+  border-color: var(--primary-light);
+  box-shadow: 0 0 0 3px rgba(59, 126, 216, 0.12);
+}
+
+.pre-assessment-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
 #phase-assessment.active .quiz-intro {
   margin-bottom: 1rem;
   text-align: left;

@@ -10,13 +10,14 @@ const App = {
   activeRecognizer: null,
 
   init() {
+    this.bindPreAssessment();
     this.bindQuiz();
     this.bindFeedback();
     this.bindRestart();
     this.setupSpeechInput();
     this.quizIndex = 0;
     this.quizAnswers = {};
-    this.renderQuestion();
+    this.showPreAssessmentStep();
     try {
       XP.updateUI();
     } catch (e) {
@@ -45,6 +46,65 @@ const App = {
     document.getElementById("quiz-back")?.addEventListener("click", () => this.quizBack());
     document.getElementById("quiz-input")?.addEventListener("input", () => this.hideQuizError());
     document.getElementById("quiz-voice-btn")?.addEventListener("click", () => this.toggleSpeech("quiz"));
+  },
+
+  bindPreAssessment() {
+    document.getElementById("pre-assessment-continue")?.addEventListener("click", () => this.startQuizFromPreAssessment());
+    ["school-name-input", "academic-disadvantage-select", "academic-disadvantage-notes"].forEach((id) => {
+      document.getElementById(id)?.addEventListener("input", () => this.hidePreAssessmentError());
+      document.getElementById(id)?.addEventListener("change", () => this.hidePreAssessmentError());
+    });
+  },
+
+  showPreAssessmentStep() {
+    document.getElementById("pre-assessment-card")?.classList.remove("hidden");
+    document.getElementById("quiz-shell")?.classList.add("hidden");
+    this.hideQuizError();
+    this.hidePreAssessmentError();
+    requestAnimationFrame(() => document.getElementById("school-name-input")?.focus());
+  },
+
+  showQuizStep() {
+    document.getElementById("pre-assessment-card")?.classList.add("hidden");
+    document.getElementById("quiz-shell")?.classList.remove("hidden");
+  },
+
+  showPreAssessmentError(msg) {
+    const el = document.getElementById("pre-assessment-error");
+    if (!el) return;
+    el.textContent = msg;
+    el.classList.remove("hidden");
+  },
+
+  hidePreAssessmentError() {
+    document.getElementById("pre-assessment-error")?.classList.add("hidden");
+  },
+
+  startQuizFromPreAssessment() {
+    const schoolName = document.getElementById("school-name-input")?.value.trim() || "";
+    const disadvantage = document.getElementById("academic-disadvantage-select")?.value || "";
+    const notes = document.getElementById("academic-disadvantage-notes")?.value.trim() || "";
+
+    if (schoolName.length < 2) {
+      this.showPreAssessmentError("Please enter your school before continuing.");
+      return;
+    }
+    if (!disadvantage) {
+      this.showPreAssessmentError("Please choose whether you have any academic disadvantages.");
+      return;
+    }
+    if (disadvantage === "yes" && notes.length < 6) {
+      this.showPreAssessmentError("Please add a little detail so Xedu can consider your learning context.");
+      return;
+    }
+
+    this.quizAnswers.schoolName = schoolName;
+    this.quizAnswers.academicDisadvantage = disadvantage;
+    this.quizAnswers.academicDisadvantageNotes = notes;
+
+    this.hidePreAssessmentError();
+    this.showQuizStep();
+    this.renderQuestion();
   },
 
   setupSpeechInput() {
@@ -402,11 +462,19 @@ const App = {
   },
 
   buildAssessmentContext(payload, result) {
+    const schoolName = payload.answers?.schoolName || "Not provided";
+    const disadvantage = payload.answers?.academicDisadvantage || "Not provided";
+    const disadvantageNotes = payload.answers?.academicDisadvantageNotes || "Not provided";
     const qa = (payload.questions || [])
       .map((item) => `Q: ${item.question}\nA: ${item.answer}`)
       .join("\n\n");
     const strengths = (result.strengths || []).map((s, i) => `${i + 1}. ${s}`).join("\n");
     return `Assessment focus: ${payload.assessmentFocus}
+
+Student profile context:
+School: ${schoolName}
+Academic disadvantages / barriers: ${disadvantage}
+Details: ${disadvantageNotes}
 
 Student's answers:
 ${qa}
@@ -543,6 +611,12 @@ Next step: ${result.nextStep || ""}`;
       this.lastResult = null;
       this.quizIndex = 0;
       this.quizAnswers = {};
+      const schoolInput = document.getElementById("school-name-input");
+      const disadvantageSelect = document.getElementById("academic-disadvantage-select");
+      const disadvantageNotes = document.getElementById("academic-disadvantage-notes");
+      if (schoolInput) schoolInput.value = "";
+      if (disadvantageSelect) disadvantageSelect.value = "";
+      if (disadvantageNotes) disadvantageNotes.value = "";
       document.getElementById("chat-messages").innerHTML = "";
       document.getElementById("chat-layout")?.classList.remove("has-messages");
       document.querySelectorAll("[data-xp-awarded]").forEach((el) => delete el.dataset.xpAwarded);
@@ -552,7 +626,7 @@ Next step: ${result.nextStep || ""}`;
       document.querySelector(".quiz-progress-wrap")?.classList.remove("hidden");
       document.getElementById("quiz-loading")?.classList.add("hidden");
       this.hideQuizError();
-      this.renderQuestion();
+      this.showPreAssessmentStep();
       this.goToPhase("assessment");
     });
   },

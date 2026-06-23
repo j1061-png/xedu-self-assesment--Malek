@@ -282,8 +282,22 @@ Generate personalized assessment questions based on what this student wants asse
             a = item.get("answer") or data.get("answers", {}).get(item.get("id"), "")
             qa_lines.append(f"Q: {q}\nA: {a}")
 
+        answers = data.get("answers", {}) or {}
+        school_name = (answers.get("schoolName") or "").strip()
+        disadvantage = (answers.get("academicDisadvantage") or "").strip()
+        disadvantage_notes = (answers.get("academicDisadvantageNotes") or "").strip()
+
+        pre_context_lines = [
+            f"School: {school_name or 'Not provided'}",
+            f"Academic disadvantages or barriers: {disadvantage or 'Not provided'}",
+            f"Details: {disadvantage_notes or 'Not provided'}",
+        ]
+
         user_prompt = f"""Assessment focus (from question 7):
 {focus}
+
+Pre-assessment context:
+{chr(10).join(pre_context_lines)}
 
 Student's 7 question answers:
 {chr(10).join(qa_lines) if qa_lines else "No quiz answers."}"""
