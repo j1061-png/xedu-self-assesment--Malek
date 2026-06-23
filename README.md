@@ -2,7 +2,7 @@
 
 Xedu is a student-facing web app that collects profile information, runs an AI assessment, and returns clear guidance.
 
-## What You Must Build
+## What It Is.
 
 These are the non-negotiable requirements this app is designed to satisfy.
 
