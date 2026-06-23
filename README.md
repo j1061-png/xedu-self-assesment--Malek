@@ -1,62 +1,108 @@
-# Xedu — Student Self-Assessment
+# XEdu
 
-Xedu is a student-facing web app that collects profile information, runs an AI assessment, and returns clear guidance.
+XEdu is an AI-powered student development platform that helps students better understand their academic and extracurricular profile through personalized assessments and interactive feedback.
 
-## What It Is.
+Students complete a short self-assessment covering academics, extracurricular activities, achievements, interests, challenges, and future aspirations. Using AI, XEdu analyzes these responses to generate meaningful insights, identify strengths, highlight opportunities for growth, and recommend actionable next steps.
 
-These are the non-negotiable requirements this app is designed to satisfy.
+Unlike traditional assessment tools that simply provide a report, XEdu enables students to continue the conversation through an integrated AI mentor. Students can ask follow-up questions, discuss their experiences, explore opportunities, and receive ongoing personalized guidance tailored to their unique profile.
 
-### 1) Input form with 5 to 7 questions
-- The assessment flow uses **7 questions**.
-- Questions are natural and easy to answer.
-- Coverage includes both:
-  - academics (grade, subjects, challenges)
-  - extracurriculars (activities, achievements, weekly time)
+---
 
-### 2) AI-generated output
-- On submit, the frontend sends answers to `POST /api/analyze`.
-- The response is personalized and includes:
-  - **strengths**
-  - **biggest gap**
-  - **one specific next step**
+## Why XEdu?
 
-### 3) Clean, readable results screen
-- Output is shown in separate sections (not a wall of raw text):
-  - score + overview
-  - strengths
-  - biggest gap
-  - next step
+Many students know what they have accomplished but struggle to understand what those experiences actually say about them. They may not know which strengths stand out, what areas need improvement, or what opportunities they should pursue next.
 
-### 4) It must actually run
-- Run locally with:
+XEdu was built to bridge this gap by combining intelligent profile analysis with conversational AI guidance. The goal is to help students reflect on their experiences, discover their potential, and make more informed decisions about their future.
 
-```bash
-python3 server.py
-```
+---
 
-- Open:
-  - `http://localhost:3000`
-  - `http://localhost:3000/assessment.html`
+## Key Features
 
-If it does not run live, it does not count.
+### Personalized Student Assessment
 
-## App Flow
+Students complete a structured assessment designed to build a holistic understanding of their profile. Questions cover areas such as:
 
-1. **Questions** — student answers 7 prompts.
-2. **Results** — AI returns score, strengths, biggest gap, next step.
-3. **Feedback** — student can ask follow-up questions about the result.
+- Academic performance
+- Subject interests
+- Extracurricular involvement
+- Leadership experiences
+- Awards and achievements
+- Personal challenges
+- Future goals and aspirations
 
-## AI Setup
+### AI-Powered Analysis
 
-Create `.env.local` in the project root:
+Once completed, the assessment is analyzed using AI to generate personalized feedback, including:
 
-```env
-DEEPSEEK_API_KEY=your_key_here
-```
+- Profile overview
+- Key strengths
+- Areas for improvement
+- Growth opportunities
+- Actionable recommendations
 
-If requests fail with insufficient balance, top up at [platform.deepseek.com](https://platform.deepseek.com).
+### Interactive AI Mentor
 
-## Stack
+After receiving their assessment results, students can continue engaging with XEdu through an integrated AI chat experience.
 
-- Plain HTML/CSS/JavaScript
-- Python server (`server.py`) for static files and API routes
+Students can:
+
+- Ask questions about their assessment
+- Explore their strengths in greater depth
+- Discuss academic interests
+- Reflect on extracurricular experiences
+- Receive personalized advice
+- Brainstorm projects and initiatives
+- Identify leadership opportunities
+- Explore future academic and career pathways
+
+Rather than ending after the assessment, the experience evolves into an ongoing conversation that helps students continuously learn more about themselves.
+
+### Actionable Recommendations
+
+XEdu focuses on practical guidance rather than generic feedback. Recommendations are designed to help students take meaningful next steps and continue developing their academic and extracurricular profile.
+
+### Student-Centered Design
+
+The platform is designed to be simple, intuitive, and accessible. Results are presented clearly, allowing students to easily understand their feedback and take action.
+
+---
+
+## How It Works
+
+### Step 1: Complete the Assessment
+
+Students answer a series of questions about their academic journey, extracurricular involvement, achievements, interests, and goals.
+
+### Step 2: Receive Personalized Insights
+
+XEdu analyzes the responses and generates an individualized assessment report containing strengths, growth areas, and recommendations.
+
+### Step 3: Continue the Conversation
+
+Students can then chat directly with the AI mentor to gain deeper insights, ask questions, and receive further guidance tailored to their experiences and aspirations.
+
+---
+
+## Technology Stack
+
+- HTML
+- CSS
+- JavaScript
+- Python
+- DeepSeek API
+
+---
+
+## Vision
+
+We believe every student deserves access to personalized guidance and mentorship.
+
+XEdu aims to make high-quality educational support accessible to all students by leveraging artificial intelligence to provide meaningful feedback, encourage self-reflection, and empower students to take ownership of their personal and academic growth.
+
+By combining assessment, analysis, and conversation into a single platform, XEdu transforms self-evaluation into an engaging and insightful experience.
+
+---
+
+## Built For Students
+
+Whether a student is looking to understand their strengths, improve their profile, discover new opportunities, or simply gain clarity about their future, XEdu provides a space for meaningful reflection and personalized guidance.
