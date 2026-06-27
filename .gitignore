@@ -18,6 +18,11 @@ dist/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+.xedu-email-log.json
+.xedu-xp-store.json
+.xedu-oauth-pending.json
+__pycache__/
+*.pyc
 
 # IDE
 .idea/

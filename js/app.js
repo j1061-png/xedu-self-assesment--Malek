@@ -2,12 +2,27 @@
 const App = {
   feedbackHistory: [],
   assessmentContext: "",
+  improvementPlanKey: "xedu-self-improvement-plan",
+  improvementProgressKey: "xedu-self-improvement-progress",
+  profileKey: "xedu-profile",
+  quizDraftKey: "xedu-assessment-draft",
   lastResult: null,
   quizIndex: 0,
   quizAnswers: {},
+  returnPhase: "assessment",
   speechSupported: false,
   recognizers: { quiz: null, chat: null },
   activeRecognizer: null,
+  voiceInputs: [
+    { kind: "preStudentName", inputId: "student-name-input", buttonId: "student-name-voice-btn" },
+    { kind: "preStudentEmail", inputId: "student-email-input", buttonId: "student-email-voice-btn" },
+    { kind: "preAdvisorEmails", inputId: "advisor-emails-input", buttonId: "advisor-emails-voice-btn" },
+    { kind: "preMeetingTranscript", inputId: "meeting-transcript-input", buttonId: "meeting-transcript-voice-btn" },
+    { kind: "preSchoolName", inputId: "school-name-input", buttonId: "school-name-voice-btn" },
+    { kind: "preDisadvantageNotes", inputId: "academic-disadvantage-notes", buttonId: "academic-disadvantage-notes-voice-btn" },
+    { kind: "quiz", inputId: "quiz-input", buttonId: "quiz-voice-btn" },
+    { kind: "chat", inputId: "chat-input", buttonId: "chat-voice-btn" },
+  ],
 
   init() {
     this.bindPreAssessment();
@@ -15,9 +30,12 @@ const App = {
     this.bindFeedback();
     this.bindRestart();
     this.setupSpeechInput();
+    this.bindImprovementActions();
     this.quizIndex = 0;
     this.quizAnswers = {};
+    this.prefillProfileFromStorage();
     this.showPreAssessmentStep();
+    this.updateChatBackButton();
     try {
       XP.updateUI();
     } catch (e) {
@@ -27,6 +45,10 @@ const App = {
 
   goToPhase(name) {
     if (this.activeRecognizer) this.stopAllSpeech();
+    if (name !== "feedback") {
+      this.returnPhase = name;
+      this.updateChatBackButton();
+    }
     document.querySelectorAll(".phase").forEach((p) => p.classList.remove("active"));
     document.getElementById(`phase-${name}`)?.classList.add("active");
     document.body.classList.toggle("chat-mode", name === "feedback");
@@ -50,10 +72,56 @@ const App = {
 
   bindPreAssessment() {
     document.getElementById("pre-assessment-continue")?.addEventListener("click", () => this.startQuizFromPreAssessment());
-    ["school-name-input", "academic-disadvantage-select", "academic-disadvantage-notes"].forEach((id) => {
-      document.getElementById(id)?.addEventListener("input", () => this.hidePreAssessmentError());
-      document.getElementById(id)?.addEventListener("change", () => this.hidePreAssessmentError());
+    document.getElementById("ask-ai-anytime-pre")?.addEventListener("click", () => this.openFeedbackAnytime("assessment"));
+    document.getElementById("ask-ai-anytime-quiz")?.addEventListener("click", () => this.openFeedbackAnytime("assessment"));
+    [
+      "student-name-input",
+      "student-email-input",
+      "advisor-emails-input",
+      "meeting-transcript-input",
+      "school-name-input",
+      "academic-disadvantage-select",
+      "academic-disadvantage-notes",
+    ].forEach((id) => {
+      const el = document.getElementById(id);
+      el?.addEventListener("input", () => {
+        this.hidePreAssessmentError();
+        this.updatePreAssessmentState();
+      });
+      el?.addEventListener("change", () => {
+        this.hidePreAssessmentError();
+        this.updatePreAssessmentState();
+      });
     });
+    [
+      { buttonId: "student-name-voice-btn", kind: "preStudentName" },
+      { buttonId: "student-email-voice-btn", kind: "preStudentEmail" },
+      { buttonId: "advisor-emails-voice-btn", kind: "preAdvisorEmails" },
+      { buttonId: "meeting-transcript-voice-btn", kind: "preMeetingTranscript" },
+      { buttonId: "school-name-voice-btn", kind: "preSchoolName" },
+      { buttonId: "academic-disadvantage-notes-voice-btn", kind: "preDisadvantageNotes" },
+    ].forEach(({ buttonId, kind }) => {
+      document.getElementById(buttonId)?.addEventListener("click", () => this.toggleSpeech(kind));
+    });
+  },
+
+  prefillProfileFromStorage() {
+    try {
+      const raw = localStorage.getItem(this.profileKey);
+      if (!raw) return;
+      const profile = JSON.parse(raw);
+      if (!profile || typeof profile !== "object") return;
+      const set = (id, value) => {
+        const el = document.getElementById(id);
+        if (el && !el.value) el.value = value || "";
+      };
+      set("student-name-input", profile.studentName);
+      set("student-email-input", profile.studentEmail);
+      set("advisor-emails-input", (profile.advisorEmails || []).join(", "));
+      set("meeting-transcript-input", profile.meetingTranscript || "");
+    } catch (e) {
+      console.warn("Profile prefill skipped", e);
+    }
   },
 
   showPreAssessmentStep() {
@@ -61,6 +129,7 @@ const App = {
     document.getElementById("quiz-shell")?.classList.add("hidden");
     this.hideQuizError();
     this.hidePreAssessmentError();
+    this.updatePreAssessmentState();
     requestAnimationFrame(() => document.getElementById("school-name-input")?.focus());
   },
 
@@ -69,10 +138,39 @@ const App = {
     document.getElementById("quiz-shell")?.classList.remove("hidden");
   },
 
+  saveDraft(showStatus = false) {
+    this.saveCurrentAnswer();
+    const draft = {
+      quizIndex: this.quizIndex,
+      quizAnswers: this.quizAnswers,
+      savedAt: new Date().toISOString(),
+    };
+    try {
+      localStorage.setItem(this.quizDraftKey, JSON.stringify(draft));
+      if (showStatus) this.showQuizNotice("Draft saved locally.");
+    } catch (e) {
+      if (showStatus) this.showQuizError("Draft could not be saved in this browser.");
+    }
+  },
+
+  loadDraft() {
+    try {
+      const raw = localStorage.getItem(this.quizDraftKey);
+      if (!raw) return false;
+      const draft = JSON.parse(raw);
+      if (!draft || typeof draft !== "object") return false;
+      this.quizAnswers = draft.quizAnswers || {};
+      this.quizIndex = Math.min(Math.max(Number(draft.quizIndex) || 0, 0), QUESTIONS.length - 1);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  },
+
   showPreAssessmentError(msg) {
     const el = document.getElementById("pre-assessment-error");
     if (!el) return;
-    el.textContent = msg;
+    el.textContent = this.normalizeUserError(msg);
     el.classList.remove("hidden");
   },
 
@@ -80,27 +178,79 @@ const App = {
     document.getElementById("pre-assessment-error")?.classList.add("hidden");
   },
 
+  isValidEmail(email) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  },
+
+  parseAdvisorEmails(raw) {
+    return String(raw || "")
+      .split(/[,\n;]/)
+      .map((x) => x.trim().toLowerCase())
+      .filter(Boolean);
+  },
+
+  getProfileFromInputs() {
+    const studentName = document.getElementById("student-name-input")?.value.trim() || "";
+    const studentEmail = document.getElementById("student-email-input")?.value.trim() || "";
+    const advisorEmailsRaw = document.getElementById("advisor-emails-input")?.value || "";
+    const advisorEmails = this.parseAdvisorEmails(advisorEmailsRaw);
+    const meetingTranscript = this.getMeetingTranscript();
+    return { studentName, studentEmail, advisorEmails, meetingTranscript };
+  },
+
+  getMeetingTranscript() {
+    return (document.getElementById("meeting-transcript-input")?.value || "").trim();
+  },
+
+  validatePreAssessmentFields() {
+    return true;
+  },
+
+  updatePreAssessmentState() {
+    const continueBtn = document.getElementById("pre-assessment-continue");
+    if (!continueBtn) return;
+    continueBtn.disabled = !this.validatePreAssessmentFields();
+  },
+
+  validateProfile(profile) {
+    if (!profile.studentName || profile.studentName.length < 2) {
+      return "Please add the student full name before continuing.";
+    }
+    if (!this.isValidEmail(profile.studentEmail)) {
+      return "Please enter a valid student email.";
+    }
+    if (!profile.advisorEmails.length) {
+      return "Please add at least one advisor email.";
+    }
+    const invalidAdvisor = profile.advisorEmails.find((email) => !this.isValidEmail(email));
+    if (invalidAdvisor) {
+      return `Advisor email is invalid: ${invalidAdvisor}`;
+    }
+    return null;
+  },
+
+  saveProfile(profile) {
+    localStorage.setItem(this.profileKey, JSON.stringify(profile));
+  },
+
   startQuizFromPreAssessment() {
+    const profile = this.getProfileFromInputs();
     const schoolName = document.getElementById("school-name-input")?.value.trim() || "";
     const disadvantage = document.getElementById("academic-disadvantage-select")?.value || "";
     const notes = document.getElementById("academic-disadvantage-notes")?.value.trim() || "";
+    const transcript = this.getMeetingTranscript();
 
-    if (schoolName.length < 2) {
-      this.showPreAssessmentError("Please enter your school before continuing.");
-      return;
+    const profileError = this.validateProfile(profile);
+    if (!profileError) {
+      this.saveProfile(profile);
+      this.quizAnswers.studentName = profile.studentName;
+      this.quizAnswers.studentEmail = profile.studentEmail;
+      this.quizAnswers.advisorEmails = profile.advisorEmails.join(", ");
     }
-    if (!disadvantage) {
-      this.showPreAssessmentError("Please choose whether you have any academic disadvantages.");
-      return;
-    }
-    if (disadvantage === "yes" && notes.length < 6) {
-      this.showPreAssessmentError("Please add a little detail so Xedu can consider your learning context.");
-      return;
-    }
-
-    this.quizAnswers.schoolName = schoolName;
-    this.quizAnswers.academicDisadvantage = disadvantage;
-    this.quizAnswers.academicDisadvantageNotes = notes;
+    if (schoolName) this.quizAnswers.schoolName = schoolName;
+    if (disadvantage) this.quizAnswers.academicDisadvantage = disadvantage;
+    if (notes) this.quizAnswers.academicDisadvantageNotes = notes;
+    if (transcript) this.quizAnswers.meetingTranscript = transcript;
 
     this.hidePreAssessmentError();
     this.showQuizStep();
@@ -112,7 +262,7 @@ const App = {
     this.speechSupported = Boolean(SpeechRecognition);
 
     if (!this.speechSupported) {
-      ["quiz-voice-btn", "chat-voice-btn"].forEach((id) => {
+      this.voiceInputs.map((v) => v.buttonId).forEach((id) => {
         const btn = document.getElementById(id);
         if (!btn) return;
         btn.disabled = true;
@@ -121,16 +271,21 @@ const App = {
       return;
     }
 
-    this.recognizers.quiz = this.createRecognizer("quiz", "quiz-input", "quiz-voice-btn");
-    this.recognizers.chat = this.createRecognizer("chat", "chat-input", "chat-voice-btn");
+    this.voiceInputs.forEach(({ kind, inputId, buttonId }) => {
+      this.recognizers[kind] = this.buildRecognizer(kind, inputId, buttonId);
+    });
   },
 
-  createRecognizer(kind, inputId, buttonId) {
+  buildRecognizer(kind, inputId, buttonId) {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     const rec = new SpeechRecognition();
     rec.lang = "en-US";
     rec.continuous = true;
     rec.interimResults = true;
+    rec._inputId = inputId;
+    rec._kind = kind;
+    rec._buttonId = buttonId;
+    rec._baseValue = "";
 
     rec.onstart = () => {
       const input = document.getElementById(inputId);
@@ -159,27 +314,38 @@ const App = {
       const input = document.getElementById(inputId);
       if (!input) return;
 
-      const base = rec._baseValue || "";
-      let finalTranscript = "";
-      let interimTranscript = "";
+      const finalParts = [];
+      let interim = "";
       for (let i = 0; i < event.results.length; i += 1) {
         const result = event.results[i];
+        const text = (result[0]?.transcript || "").trim();
+        if (!text) continue;
         if (result.isFinal) {
-          finalTranscript += result[0].transcript + " ";
+          finalParts.push(text);
         } else {
-          interimTranscript += result[0].transcript + " ";
+          interim = text;
         }
       }
-      const chunk = `${finalTranscript}${interimTranscript}`.trim();
-      if (!chunk) return;
 
-      input.value = `${base}${base ? " " : ""}${chunk}`.trim();
+      const sessionText = [...finalParts, interim].filter(Boolean).join(" ").trim();
+      if (!sessionText) return;
+
+      const base = rec._baseValue || "";
+      input.value = base ? `${base} ${sessionText}`.trim() : sessionText;
+
       if (kind === "quiz") this.hideQuizError();
       if (kind === "chat") this.updateComposeState();
       input.dispatchEvent(new Event("input", { bubbles: true }));
     };
 
     return rec;
+  },
+
+  ensureRecognizer(kind) {
+    const config = this.voiceInputs.find((v) => v.kind === kind);
+    if (!config) return null;
+    this.recognizers[kind] = this.buildRecognizer(config.kind, config.inputId, config.buttonId);
+    return this.recognizers[kind];
   },
 
   toggleSpeech(kind) {
@@ -189,28 +355,48 @@ const App = {
       this.recognizers[this.activeRecognizer]?.stop();
     }
 
-    const rec = this.recognizers[kind];
+    if (this.activeRecognizer === kind) {
+      this.recognizers[kind]?.stop();
+      return;
+    }
+
+    const rec = this.ensureRecognizer(kind);
     if (!rec) return;
 
-    if (this.activeRecognizer === kind) {
-      rec.stop();
-    } else {
+    try {
+      rec.start();
+    } catch (err) {
       try {
-        rec.start();
-      } catch (err) {
+        const retry = this.ensureRecognizer(kind);
+        retry?.start();
+      } catch (retryErr) {
         this.showVoiceError(kind, "Voice input could not start. Please click mic again.");
       }
     }
   },
 
   stopAllSpeech() {
-    Object.values(this.recognizers).forEach((rec) => rec?.stop());
+    Object.keys(this.recognizers).forEach((kind) => {
+      try {
+        this.recognizers[kind]?.stop();
+      } catch (e) {
+        /* ignore */
+      }
+    });
     this.activeRecognizer = null;
+    document.querySelectorAll(".voice-btn.listening").forEach((btn) => {
+      btn.classList.remove("listening");
+      btn.setAttribute("aria-pressed", "false");
+    });
   },
 
   showVoiceError(kind, message) {
     if (kind === "quiz") {
       this.showQuizError(message);
+      return;
+    }
+    if (String(kind).startsWith("pre")) {
+      this.showPreAssessmentError(message);
       return;
     }
     this.showChatError(message);
@@ -252,12 +438,23 @@ const App = {
   showQuizError(msg) {
     const el = document.getElementById("quiz-error");
     if (!el) return;
-    el.textContent = msg;
-    el.classList.remove("hidden");
+    el.textContent = this.normalizeUserError(msg);
+    el.classList.remove("hidden", "alert-info");
+    el.classList.add("alert-error");
   },
 
   hideQuizError() {
     document.getElementById("quiz-error")?.classList.add("hidden");
+  },
+
+  showQuizNotice(msg) {
+    const el = document.getElementById("quiz-error");
+    if (!el) return;
+    el.textContent = msg;
+    el.classList.remove("hidden", "alert-error");
+    el.classList.add("alert-info");
+    clearTimeout(this.quizNoticeTimer);
+    this.quizNoticeTimer = setTimeout(() => this.hideQuizError(), 1800);
   },
 
   updateQuizProgress() {
@@ -336,18 +533,22 @@ const App = {
     this.saveCurrentAnswer();
     this.quizIndex--;
     this.renderQuestion();
+    this.saveDraft(false);
   },
 
   async quizNext() {
     const err = this.validateCurrent();
     if (err) return this.showQuizError(err);
     this.saveCurrentAnswer();
+    this.saveDraft(false);
     this.hideQuizError();
     if (this.quizIndex < QUESTIONS.length - 1) {
       this.quizIndex++;
       this.renderQuestion();
+      this.saveDraft(false);
       return;
     }
+    this.saveDraft(false);
     await this.submitQuiz();
   },
 
@@ -365,13 +566,7 @@ const App = {
     const payload = buildAnalyzePayload(this.quizAnswers, "", "", QUESTIONS);
 
     try {
-      const res = await fetch("/api/analyze", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const body = await res.json();
-      if (!res.ok) throw new Error(body.error || "Assessment failed.");
+      const body = await this.postAnalyze(payload);
       this.showResults(payload, body.result);
     } catch (submitErr) {
       loading?.classList.add("hidden");
@@ -382,10 +577,22 @@ const App = {
     }
   },
 
+  async postAnalyze(payload) {
+    const res = await fetch("/api/analyze", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const body = await res.json();
+    if (!res.ok) throw new Error(body.error || "Assessment failed.");
+    return body;
+  },
+
   bindFeedback() {
     const input = document.getElementById("chat-input");
     document.getElementById("chat-send")?.addEventListener("click", () => this.sendFeedback());
     document.getElementById("feedback-btn")?.addEventListener("click", () => this.startFeedback());
+    document.getElementById("chat-back-btn")?.addEventListener("click", () => this.goToPhase(this.returnPhase || "assessment"));
     document.getElementById("chat-voice-btn")?.addEventListener("click", () => this.toggleSpeech("chat"));
     input?.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && !e.shiftKey) {
@@ -399,6 +606,37 @@ const App = {
       this.updateComposeState();
     });
     this.updateComposeState();
+  },
+
+  openFeedbackAnytime(returnPhase = "assessment") {
+    const profile = this.getProfileFromInputs();
+    const schoolName = document.getElementById("school-name-input")?.value.trim() || "";
+    const disadvantage = document.getElementById("academic-disadvantage-select")?.value || "";
+    const notes = document.getElementById("academic-disadvantage-notes")?.value.trim() || "";
+    const transcript = this.getMeetingTranscript();
+
+    // "Ask Xedu now" must stay available at any stage without hard blockers.
+    const profileError = this.validateProfile(profile);
+    if (!profileError) {
+      this.saveProfile(profile);
+    } else {
+      this.hidePreAssessmentError();
+    }
+
+    if (schoolName) this.quizAnswers.schoolName = schoolName;
+    if (disadvantage) this.quizAnswers.academicDisadvantage = disadvantage;
+    if (notes) this.quizAnswers.academicDisadvantageNotes = notes;
+    if (transcript) this.quizAnswers.meetingTranscript = transcript;
+
+    this.returnPhase = returnPhase;
+    this.updateChatBackButton();
+    this.startFeedback();
+  },
+
+  updateChatBackButton() {
+    const btn = document.getElementById("chat-back-btn");
+    if (!btn) return;
+    btn.classList.toggle("hidden", !this.returnPhase);
   },
 
   updateComposeState() {
@@ -456,25 +694,128 @@ const App = {
 
   showChatError(msg) {
     const el = document.getElementById("chat-error");
-    el.textContent = msg;
+    el.textContent = this.normalizeUserError(msg);
     el.classList.remove("hidden");
     setTimeout(() => el.classList.add("hidden"), 6000);
+  },
+
+  normalizeUserError(msg) {
+    const text = String(msg || "").trim();
+    if (!text) return "Something went wrong. Please try again.";
+    return text;
+  },
+
+  bindImprovementActions() {
+    document.getElementById("share-action-plan-btn")?.addEventListener("click", () => this.shareActionPlan());
+  },
+
+  showShareStatus(msg, isError = false) {
+    const el = document.getElementById("share-action-plan-status");
+    if (!el) return;
+    el.textContent = msg;
+    el.style.color = isError ? "var(--error)" : "var(--muted)";
+    el.classList.remove("hidden");
+    setTimeout(() => el.classList.add("hidden"), 4500);
+  },
+
+  buildActionPlanShareText() {
+    const result = this.lastResult || {};
+    const focus = this.quizAnswers?.assessmentFocus || "My academic development";
+    const score = typeof result.assessmentScore === "number" ? `${result.assessmentScore}%` : "N/A";
+    const nextStep = result.nextStep || "No next step provided";
+    const actionPlan = (result.actionPlan || []).map((item, i) => `${i + 1}. ${item}`).join("\n");
+    const weeklyTasks = (result.weeklyTasks || []).map((item, i) => `${i + 1}. ${item}`).join("\n");
+
+    const summary = result.summary || "Not available";
+    const biggestGap = result.biggestGap || "Not available";
+
+    return `My Xedu Self-Improvement Plan
+
+Focus: ${focus}
+Score: ${score}
+Summary: ${summary}
+Biggest gap: ${biggestGap}
+Next step: ${nextStep}
+
+Action plan:
+${actionPlan || "Not available"}
+
+Weekly tasks:
+${weeklyTasks || "Not available"}`;
+  },
+
+  persistImprovementPlan(formData, result) {
+    const payload = {
+      generatedAt: new Date().toISOString(),
+      assessmentFocus: formData?.assessmentFocus || "",
+      assessmentScore: result?.assessmentScore ?? null,
+      scoreLabel: result?.scoreLabel || "",
+      summary: result?.summary || "",
+      biggestGap: result?.biggestGap || "",
+      nextStep: result?.nextStep || "",
+      actionPlan: Array.isArray(result?.actionPlan) ? result.actionPlan : [],
+      weeklyTasks: Array.isArray(result?.weeklyTasks) ? result.weeklyTasks : [],
+      strengths: Array.isArray(result?.strengths) ? result.strengths : [],
+      studentContext: {
+        answers: formData?.answers || {},
+        questions: formData?.questions || [],
+        assessment: {
+          assessmentScore: result?.assessmentScore ?? null,
+          scoreLabel: result?.scoreLabel || "",
+          summary: result?.summary || "",
+          biggestGap: result?.biggestGap || "",
+          nextStep: result?.nextStep || "",
+          strengths: result?.strengths || [],
+        },
+      },
+    };
+    localStorage.setItem(this.improvementPlanKey, JSON.stringify(payload));
+    localStorage.removeItem(this.improvementProgressKey);
+  },
+
+  async shareActionPlan() {
+    const text = this.buildActionPlanShareText();
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: "My Xedu Action Plan",
+          text,
+        });
+        this.showShareStatus("Action plan shared.");
+        return;
+      }
+      throw new Error("Web Share not supported");
+    } catch (shareErr) {
+      if (shareErr?.name === "AbortError") return;
+      try {
+        await navigator.clipboard.writeText(text);
+        this.showShareStatus("Action plan copied. You can paste and share it.");
+      } catch (copyErr) {
+        this.showShareStatus("Could not share automatically. Please copy manually.", true);
+      }
+    }
   },
 
   buildAssessmentContext(payload, result) {
     const schoolName = payload.answers?.schoolName || "Not provided";
     const disadvantage = payload.answers?.academicDisadvantage || "Not provided";
     const disadvantageNotes = payload.answers?.academicDisadvantageNotes || "Not provided";
+    const meetingTranscript = payload.answers?.meetingTranscript || "Not provided";
     const qa = (payload.questions || [])
       .map((item) => `Q: ${item.question}\nA: ${item.answer}`)
       .join("\n\n");
     const strengths = (result.strengths || []).map((s, i) => `${i + 1}. ${s}`).join("\n");
+    const actionPlan = (result.actionPlan || []).map((step, i) => `${i + 1}. ${step}`).join("\n");
+    const weeklyTasks = (result.weeklyTasks || []).map((task, i) => `${i + 1}. ${task}`).join("\n");
     return `Assessment focus: ${payload.assessmentFocus}
 
 Student profile context:
 School: ${schoolName}
 Academic disadvantages / barriers: ${disadvantage}
 Details: ${disadvantageNotes}
+
+Full advisor-student meeting transcript (primary evidence):
+${meetingTranscript}
 
 Student's answers:
 ${qa}
@@ -488,16 +829,23 @@ ${strengths}
 
 Biggest gap: ${result.biggestGap || ""}
 
-Next step: ${result.nextStep || ""}`;
+Next step: ${result.nextStep || ""}
+
+Self improvement action plan:
+${actionPlan || "Not provided"}
+
+Weekly tasks:
+${weeklyTasks || "Not provided"}`;
   },
 
   startFeedback() {
     this.goToPhase("feedback");
     const box = document.getElementById("chat-messages");
     if (box?.childElementCount > 0) return;
-    const greeting =
-      "Your assessment is ready. Ask me anything — I can explain your results, " +
-      "help you with your next step, or answer follow-up questions about your profile.";
+    const hasAssessment = Boolean(this.assessmentContext);
+    const greeting = hasAssessment
+      ? "Your assessment is ready. Ask me anything — I can explain your results, help you with your next step, or answer follow-up questions about your profile."
+      : "Ask me anything at any time. I will give constructive, specific advice you can act on right now.";
     this.feedbackHistory = [{ role: "assistant", content: greeting }];
     this.addMessage(greeting, "bot");
   },
@@ -555,6 +903,7 @@ Next step: ${result.nextStep || ""}`;
   showResults(formData, result) {
     this.lastResult = result;
     this.assessmentContext = this.buildAssessmentContext(formData, result);
+    this.persistImprovementPlan(formData, result);
     const percent = result.assessmentScore ?? 0;
     const band = scoreLabel(percent);
     const aiLabel = result.scoreLabel || band.label;
@@ -573,6 +922,7 @@ Next step: ${result.nextStep || ""}`;
     document.getElementById("result-summary").textContent = result.summary;
     document.getElementById("result-gap").textContent = result.biggestGap;
     document.getElementById("result-next-step").textContent = result.nextStep;
+    this.renderImprovementLists(result);
 
     const grid = document.getElementById("strengths-grid");
     grid.innerHTML = "";
@@ -583,18 +933,20 @@ Next step: ${result.nextStep || ""}`;
       grid.appendChild(card);
     });
 
-    const xp = XP.awardAssessment(percent);
     const badge = document.getElementById("xp-earned-badge");
-    if (badge) {
-      badge.textContent = xp.improved
-        ? `+${xp.total} XP — improved since last time!`
-        : `+${xp.total} XP earned!`;
-    }
+    if (badge) badge.textContent = "Saving XP…";
+    this.saveAssessmentTaskXp(formData, percent, badge);
 
     this.feedbackHistory = [];
     document.getElementById("chat-messages").innerHTML = "";
     document.getElementById("chat-layout")?.classList.remove("has-messages");
     this.goToPhase("results");
+  },
+
+  renderImprovementLists(result) {
+    const ctx = this.assessmentContext;
+    Improvement.renderList("result-action-plan", result.actionPlan, "actionPlan", { assessmentContext: ctx });
+    Improvement.renderList("result-weekly-tasks", result.weeklyTasks, "weeklyTasks", { assessmentContext: ctx });
   },
 
   esc(t) {
@@ -603,30 +955,90 @@ Next step: ${result.nextStep || ""}`;
     return d.innerHTML;
   },
 
+  hashString(value) {
+    const text = String(value || "");
+    let hash = 0;
+    for (let i = 0; i < text.length; i += 1) {
+      hash = (hash << 5) - hash + text.charCodeAt(i);
+      hash |= 0;
+    }
+    return Math.abs(hash).toString(36);
+  },
+
+  taskIdFor(type, payload) {
+    return `${type}:${this.hashString(JSON.stringify(payload || {}))}`;
+  },
+
+  async saveAssessmentTaskXp(formData, percent, badge) {
+    if (typeof XP === "undefined") return;
+    try {
+      const result = await XP.completeTask(
+        "assessment",
+        this.taskIdFor("assessment", {
+          focus: formData.assessmentFocus,
+          answers: formData.answers,
+          questions: formData.questions,
+          score: percent,
+        }),
+        { score: percent },
+        { showPopup: true }
+      );
+      if (badge) {
+        badge.textContent = result.duplicate
+          ? "Assessment XP already saved"
+          : `+${result.awardedXp.toLocaleString()} XP earned`;
+      }
+    } catch (e) {
+      if (badge) badge.textContent = "Assessment complete — XP will sync when the server is available";
+      console.warn("Assessment XP award failed", e);
+    }
+  },
+
   bindRestart() {
     document.getElementById("restart-btn")?.addEventListener("click", () => {
       this.stopAllSpeech();
       this.feedbackHistory = [];
       this.assessmentContext = "";
       this.lastResult = null;
+      localStorage.removeItem(this.improvementPlanKey);
+      localStorage.removeItem(this.improvementProgressKey);
       this.quizIndex = 0;
       this.quizAnswers = {};
+      this.returnPhase = "assessment";
+      localStorage.removeItem(this.profileKey);
+      const studentName = document.getElementById("student-name-input");
+      const studentEmail = document.getElementById("student-email-input");
+      const advisorEmails = document.getElementById("advisor-emails-input");
+      const meetingTranscript = document.getElementById("meeting-transcript-input");
       const schoolInput = document.getElementById("school-name-input");
       const disadvantageSelect = document.getElementById("academic-disadvantage-select");
       const disadvantageNotes = document.getElementById("academic-disadvantage-notes");
+      if (studentName) studentName.value = "";
+      if (studentEmail) studentEmail.value = "";
+      if (advisorEmails) advisorEmails.value = "";
+      if (meetingTranscript) meetingTranscript.value = "";
       if (schoolInput) schoolInput.value = "";
       if (disadvantageSelect) disadvantageSelect.value = "";
       if (disadvantageNotes) disadvantageNotes.value = "";
       document.getElementById("chat-messages").innerHTML = "";
       document.getElementById("chat-layout")?.classList.remove("has-messages");
-      document.querySelectorAll("[data-xp-awarded]").forEach((el) => delete el.dataset.xpAwarded);
-
       document.getElementById("quiz-card")?.classList.remove("hidden");
       document.querySelector(".quiz-nav")?.classList.remove("hidden");
       document.querySelector(".quiz-progress-wrap")?.classList.remove("hidden");
       document.getElementById("quiz-loading")?.classList.add("hidden");
       this.hideQuizError();
+      document.getElementById("share-action-plan-status")?.classList.add("hidden");
+      Improvement.renderList("result-action-plan", [], "actionPlan");
+      Improvement.renderList("result-weekly-tasks", [], "weeklyTasks");
+      document.getElementById("result-summary").textContent = "";
+      document.getElementById("result-gap").textContent = "";
+      document.getElementById("result-next-step").textContent = "";
+      document.getElementById("strengths-grid").innerHTML = "";
+      document.getElementById("results-focus").textContent = "";
+      document.getElementById("score-percent").textContent = "0%";
+      document.getElementById("xp-earned-badge").textContent = "+150 XP earned";
       this.showPreAssessmentStep();
+      this.updateChatBackButton();
       this.goToPhase("assessment");
     });
   },

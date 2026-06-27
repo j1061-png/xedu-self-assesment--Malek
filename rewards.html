@@ -4,12 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Rewards &amp; Levels — Xedu</title>
-  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg?v=1" />
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg?v=20" />
   <link rel="apple-touch-icon" href="assets/logo.png?v=6" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/site.css" />
+  <link rel="stylesheet" href="css/site.css?v=36" />
+  <link rel="stylesheet" href="css/app.css?v=33" />
 </head>
 <body>
   <div class="bg-mesh" aria-hidden="true"></div>
@@ -25,10 +26,10 @@
   <header class="site-header">
     <div class="header-inner">
       <a href="index.html" class="brand-link">
-        <img src="assets/logo.png" alt="Xedu" class="logo" width="68" height="46" />
+        <img src="assets/logo.png?v=8" alt="Xedu" class="logo" />
         <span class="brand-label"><span class="brand-title">Self Assessment Tool</span></span>
       </a>
-      <nav class="nav"><a href="index.html">Home</a><a href="students.html">Students</a><a href="advisors.html">Advisors</a><a href="about.html">About</a></nav>
+      <nav class="nav"><a href="index.html">Home</a><a href="students.html">Students</a><a href="advisors.html">Advisors</a><a href="self-improvement.html">Self Improvement</a><a href="about.html">About</a></nav>
       <div class="header-actions">
         <a href="rewards.html" class="sparx-xp active-xp" aria-label="View rewards and levels">
           <span class="sparx-level" aria-hidden="true"><span id="level">1</span></span>
@@ -47,7 +48,7 @@
     <section class="page-hero rewards-hero reveal reveal-hero">
       <p class="hero-eyebrow"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#icon-trophy"></use></svg> Rewards</p>
       <h1>Your levels &amp; <span class="text-accent">awards</span></h1>
-      <p class="hero-lead">Earn XP by chatting, completing the quiz, and finishing assessments. Unlock awards as you level up.</p>
+      <p class="hero-lead">Earn XP from assessments and improvement tasks. When you reach a new level, your advisor gets an email automatically.</p>
     </section>
 
     <section class="container rewards-summary">
@@ -63,21 +64,42 @@
         <div class="rewards-stat rewards-stat-wide">
           <span class="rewards-stat-label">Progress to next level</span>
           <div class="rewards-progress-bar"><div class="rewards-progress-fill" id="rewards-progress-fill"></div></div>
-          <span class="rewards-stat-sub" id="rewards-next">100 XP to Level 2</span>
+          <span class="rewards-stat-sub" id="rewards-next">250 XP to Level 2</span>
         </div>
       </div>
     </section>
 
+    <section class="container section reveal">
+      <div id="xp-advisor-panel"></div>
+      <p id="rewards-last-notification" class="rewards-last-notification hidden" aria-live="polite"></p>
+    </section>
+
     <section class="container rewards-section reveal">
-      <h2 class="rewards-heading reveal">Level awards</h2>
-      <p class="rewards-sub reveal">Complete activities to earn XP and unlock each award.</p>
+      <h2 class="rewards-heading">Level awards</h2>
+      <p class="rewards-sub">Complete activities to earn XP and unlock each award.</p>
       <div class="awards-grid" id="awards-grid"></div>
+    </section>
+
+    <section class="container section reveal">
+      <div class="panel-box result-block">
+        <h3>How you earn XP</h3>
+        <p class="sub">Each completed activity awards XP once. Level-ups trigger advisor emails when Gmail is configured on the server.</p>
+        <div class="xp-breakdown rewards-xp-breakdown" id="xp-breakdown"></div>
+      </div>
+    </section>
+
+    <section class="container section reveal">
+      <div class="panel-box result-block">
+        <h3>Recent activity</h3>
+        <p class="sub">Your latest XP gains, synced from the server.</p>
+        <div class="xp-activity-feed rewards-activity-feed" id="xp-activity-feed"></div>
+      </div>
     </section>
 
     <section class="container rewards-cta">
       <div class="cta-card reveal">
         <h3>Want more XP?</h3>
-        <p>Chat with Xedu, complete the assessment quiz, and finish your profile for bonus points.</p>
+        <p>Complete the self-assessment, finish improvement tasks, and keep working through your action plan.</p>
         <a href="assessment.html" class="btn btn-primary">Earn XP Now</a>
       </div>
     </section>
@@ -85,19 +107,16 @@
 
   <footer class="site-footer">
     <div class="container footer-grid">
-      <div class="footer-brand">
-        <img src="assets/logo.png" alt="Xedu" class="logo" width="68" height="46" />
-        <p>Personalised guidance for students on their journey to university.</p>
-      </div>
-      <div class="footer-col"><h4>Product</h4><a href="assessment.html">Self-Assessment</a><a href="rewards.html">Rewards</a><a href="students.html">Students</a></div>
+      <div class="footer-brand"><img src="assets/logo.png?v=8" alt="Xedu" class="logo" /><p>Personalised guidance for students on their journey to university.</p></div>
+      <div class="footer-col"><h4>Product</h4><a href="assessment.html">Self-Assessment</a><a href="self-improvement.html">Self Improvement</a><a href="rewards.html">Rewards</a><a href="students.html">Students</a></div>
       <div class="footer-col"><h4>Company</h4><a href="about.html">About</a><a href="https://xedu.app" target="_blank" rel="noopener">xedu.app</a></div>
       <div class="footer-col"><h4>Get started</h4><a href="assessment.html">Start Assessment</a></div>
     </div>
     <div class="footer-bottom container">© 2026 Xedu. All rights reserved.</div>
   </footer>
 
-  <script src="js/xp.js" defer></script>
-  <script src="js/layout.js" defer></script>
-  <script src="js/rewards.js" defer></script>
+  <script src="js/xp.js?v=36" defer></script>
+  <script src="js/layout.js?v=24" defer></script>
+  <script src="js/rewards.js?v=35" defer></script>
 </body>
 </html>

@@ -1,5 +1,5 @@
 /**
- * Seven assessment questions — asked after chat, before AI feedback.
+ * Seven assessment questions — pre-assessment intake, then one-by-one quiz flow.
  */
 const QUESTIONS = [
   {
@@ -16,8 +16,8 @@ const QUESTIONS = [
     field: "subjects",
     type: "text",
     title: "What subjects are you currently studying, and which ones do you perform best in?",
-    subtitle: "List your subjects and say where you're strongest.",
-    placeholder: "e.g. A-Levels in Maths, Chemistry and Biology. Strongest in Maths and Chemistry — consistently top of class…",
+    subtitle: "List your current subjects and highlight your strongest ones.",
+    placeholder: "e.g. Mathematics, English, Biology, Chemistry, and History. I perform best in Mathematics and Biology...",
     minLength: 25,
   },
   {

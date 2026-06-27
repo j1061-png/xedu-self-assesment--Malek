@@ -1,6 +1,24 @@
 [build]
   publish = "."
 
+# Force HTTPS and normalize www → apex (adjust if you prefer www as primary)
+[[redirects]]
+  from = "http://xedu.bio/*"
+  to = "https://xedu.bio/:splat"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "http://www.xedu.bio/*"
+  to = "https://xedu.bio/:splat"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "https://www.xedu.bio/*"
+  to = "https://xedu.bio/:splat"
+  status = 301
+
 [[redirects]]
   from = "/"
   to = "/index.html"
@@ -9,6 +27,16 @@
 [[redirects]]
   from = "/assessment"
   to = "/assessment.html"
+  status = 301
+
+[[redirects]]
+  from = "/rewards"
+  to = "/rewards.html"
+  status = 301
+
+[[redirects]]
+  from = "/about"
+  to = "/about.html"
   status = 301
 
 [[headers]]
@@ -24,9 +52,9 @@
 [[headers]]
   for = "/css/*"
   [headers.values]
-    Cache-Control = "public, max-age=31536000, immutable"
+    Cache-Control = "public, max-age=0, must-revalidate"
 
 [[headers]]
   for = "/js/*"
   [headers.values]
-    Cache-Control = "public, max-age=31536000, immutable"
+    Cache-Control = "public, max-age=0, must-revalidate"

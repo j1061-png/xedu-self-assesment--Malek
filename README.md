@@ -90,6 +90,31 @@ Students can then chat directly with the AI mentor to gain deeper insights, ask 
 - JavaScript
 - Python
 - DeepSeek API
+- Gmail API (advisor level-up emails)
+
+---
+
+## Local setup
+
+```bash
+python3 server.py
+```
+
+Open `http://localhost:3000`.
+
+Add `DEEPSEEK_API_KEY` to `.env.local` (see `.env.example`).
+
+### Gmail advisor notifications
+
+Level-up emails use **Gmail SMTP + App Password** (no separate mail server required).
+
+1. Follow **[GMAIL_SETUP.md](GMAIL_SETUP.md)** to set `EMAIL_USER` and `EMAIL_APP_PASSWORD` in `.env.local`.
+2. Run `python3 server.py` and level up on the Rewards page to test.
+
+```bash
+curl http://127.0.0.1:3000/api/email/status
+python3 scripts/test_email.py advisor@example.com
+```
 
 ---
 
