@@ -16,7 +16,6 @@ from pathlib import Path
 from typing import Optional
 from datetime import datetime
 
-from services import email_service as email_svc
 
 PORT = int(os.environ.get("PORT", 3000))
 ROOT = Path(__file__).parent.resolve()
@@ -182,11 +181,23 @@ def load_env(path: Path) -> dict:
 ENV = load_env(ROOT / ".env.local")
 API_KEY = os.environ.get("DEEPSEEK_API_KEY") or ENV.get("DEEPSEEK_API_KEY", "")
 XP_STORE_PATH = ROOT / ".xedu-xp-store.json"
+XP_PER_LEVEL = 1000
+MAX_XP_LEVEL = 100
 XP_TASK_VALUES = {
-    "assessment": 75,
-    "advisorTask": 100,
-    "reflection": 40,
-    "improvement": 60,
+    "assessment": 250,
+    "scoreImprovement": 250,
+    "improvement": 100,
+    "reflection": 150,
+    "dailyLogin": 25,
+    "advisorTask": 250,
+}
+XP_TASK_LABELS = {
+    "assessment": "Assessment completed",
+    "scoreImprovement": "Assessment score improved 5%+",
+    "improvement": "Improvement task completed",
+    "reflection": "Weekly goal completed",
+    "dailyLogin": "Daily login",
+    "advisorTask": "Advisor-approved task",
 }
 
 
@@ -235,51 +246,37 @@ def parse_json_response(raw: str) -> dict:
     return json.loads(cleaned)
 
 
-def email_config_status() -> dict:
-    return email_svc.config_status()
-
-
 def xp_threshold_for_level(level: int) -> int:
-    """Total XP needed to reach a numbered level. Level 1 starts at 0 XP."""
-    level = max(1, int(level))
-    thresholds = [0, 250, 600, 1000, 1500]
-    if level <= len(thresholds):
-        return thresholds[level - 1]
-    total = thresholds[-1]
-    gap = 500
-    for _ in range(6, level + 1):
-        gap += 100
-        total += gap
-    return total
+    """Total XP required to reach this level. Level 1 = 0 XP."""
+    level = max(1, min(MAX_XP_LEVEL, int(level)))
+    return (level - 1) * XP_PER_LEVEL
 
 
 def xp_level_from_total(total_xp: int) -> int:
     total_xp = max(0, int(total_xp or 0))
-    level = 1
-    while level < 100 and total_xp >= xp_threshold_for_level(level + 1):
-        level += 1
-    return level
+    return min(MAX_XP_LEVEL, total_xp // XP_PER_LEVEL + 1)
 
 
 def xp_state(total_xp: int) -> dict:
     total_xp = max(0, int(total_xp or 0))
     level = xp_level_from_total(total_xp)
     current_threshold = xp_threshold_for_level(level)
-    next_threshold = xp_threshold_for_level(level + 1) if level < 100 else current_threshold
-    span = max(1, next_threshold - current_threshold)
-    xp_into_level = min(span, max(0, total_xp - current_threshold))
-    xp_to_next = 0 if level >= 100 else max(0, next_threshold - total_xp)
+    next_threshold = xp_threshold_for_level(level + 1) if level < MAX_XP_LEVEL else None
+    xp_into_level = total_xp - current_threshold
+    xp_to_next = 0 if level >= MAX_XP_LEVEL or next_threshold is None else max(0, next_threshold - total_xp)
+    progress = 100 if level >= MAX_XP_LEVEL else round((xp_into_level / XP_PER_LEVEL) * 100)
     return {
         "totalXp": total_xp,
         "level": level,
         "currentLevelXp": current_threshold,
-        "nextLevelXp": next_threshold if level < 100 else None,
+        "nextLevelXp": next_threshold,
         "xpIntoLevel": xp_into_level,
         "xpToNext": xp_to_next,
-        "progressPercent": 100 if level >= 100 else round((xp_into_level / span) * 100),
+        "progressPercent": progress,
         "previousLevel": max(1, level - 1),
-        "nextLevel": min(100, level + 1),
-        "maxLevel": 100,
+        "nextLevel": min(MAX_XP_LEVEL, level + 1),
+        "maxLevel": MAX_XP_LEVEL,
+        "xpPerLevel": XP_PER_LEVEL,
     }
 
 
@@ -308,15 +305,15 @@ def default_xp_record() -> dict:
     return {
         "totalXp": 0,
         "completedTasks": [],
-        "notifiedLevels": [],
         "stats": {
             "assessmentsCompleted": 0,
             "tasksCompleted": 0,
             "reflectionsCompleted": 0,
             "improvementsCompleted": 0,
+            "loginsCompleted": 0,
         },
         "activity": [],
-        "lastNotification": None,
+        "lastLevelUp": None,
     }
 
 
@@ -441,12 +438,6 @@ class Handler(SimpleHTTPRequestHandler):
             self.send_header("Cache-Control", "no-cache")
         super().end_headers()
 
-    def do_GET(self):
-        path = self.path.split("?")[0]
-        if path == "/api/email/status":
-            return self._handle_email_status()
-        return super().do_GET()
-
     def do_POST(self):
         length = int(self.headers.get("Content-Length", 0))
         raw = self.rfile.read(length)
@@ -461,10 +452,6 @@ class Handler(SimpleHTTPRequestHandler):
             return self._handle_task_feedback(data)
         if self.path == "/api/generate-action-plan":
             return self._handle_generate_action_plan(data)
-        if self.path == "/api/notify-level-up":
-            return self._handle_notify_level_up(data)
-        if self.path == "/api/email/test":
-            return self._handle_email_test(data)
         if self.path == "/api/xp/state":
             return self._handle_xp_state(data)
         if self.path == "/api/xp/complete-task":
@@ -600,43 +587,6 @@ Generate personalized assessment questions based on what this student wants asse
             print(f"[/api/generate-questions] {exc}")
             return self._json(500, {"error": str(exc)})
 
-    def _handle_email_status(self):
-        return self._json(200, {"ok": True, **email_svc.verify_connection()})
-
-    def _handle_email_test(self, data: dict):
-        to_addr = (data.get("to") or data.get("email") or "").strip().lower()
-        if not re.match(r"^[^\s@]+@[^\s@]+\.[^\s@]+$", to_addr):
-            return self._json(400, {"error": "Valid recipient email required.", **email_config_status()})
-        try:
-            result = email_svc.send_test_email(to_addr)
-            return self._json(200, {**result, **email_config_status()})
-        except Exception as exc:
-            print(f"[/api/email/test] {exc}")
-            return self._json(500, {"error": str(exc), **email_config_status()})
-
-    def _handle_notify_level_up(self, data: dict):
-        try:
-            result = email_svc.notify_level_up(data)
-        except ValueError as exc:
-            return self._json(400, {"ok": False, "error": str(exc), "message": "Unable to notify advisor"})
-        except Exception as exc:
-            print(f"[/api/notify-level-up] {exc}")
-            return self._json(500, {"ok": False, "error": str(exc), "message": "Unable to notify advisor"})
-        status = 200 if result.get("ok") else 503
-        return self._json(status, result)
-
-    def _send_level_up_emails(
-        self,
-        profile: dict,
-        previous_level: int,
-        new_level: int,
-        total_xp: int,
-        notified_levels: set,
-    ) -> dict:
-        return email_svc.notify_level_up_batch(
-            profile, previous_level, new_level, total_xp, notified_levels
-        )
-
     def _handle_xp_state(self, data: dict):
         profile = data.get("profile") or {}
         student_id = student_id_from_profile(profile)
@@ -650,9 +600,9 @@ Generate personalized assessment questions based on what this student wants asse
             "completedTasks": record.get("completedTasks", []),
             "stats": record.get("stats") or default_xp_record()["stats"],
             "activity": record.get("activity", [])[:12],
-            "lastNotification": record.get("lastNotification"),
+            "history": record.get("activity", [])[:12],
+            "lastLevelUp": record.get("lastLevelUp"),
             "taskValues": XP_TASK_VALUES,
-            "emailConfig": email_config_status(),
         })
 
     def _handle_xp_complete_task(self, data: dict):
@@ -669,7 +619,6 @@ Generate personalized assessment questions based on what this student wants asse
         store = read_xp_store()
         record = store.get(student_id) or default_xp_record()
         completed = set(record.get("completedTasks") or [])
-        notified_levels = set(int(x) for x in (record.get("notifiedLevels") or []) if str(x).isdigit())
         stats = record.get("stats") or default_xp_record()["stats"]
         activity = record.get("activity") or []
         state_before = xp_state(record.get("totalXp", 0))
@@ -684,11 +633,10 @@ Generate personalized assessment questions based on what this student wants asse
                 "previousState": state_before,
                 "stats": stats,
                 "activity": activity[:12],
-                "lastNotification": record.get("lastNotification"),
+                "history": activity[:12],
+                "lastLevelUp": record.get("lastLevelUp"),
                 "taskValues": XP_TASK_VALUES,
                 "levelUp": None,
-                "email": {"sent": 0, "failed": [], "skipped": ["Task already awarded XP"]},
-                "emailConfig": email_config_status(),
             })
 
         awarded = XP_TASK_VALUES[task_type]
@@ -696,29 +644,16 @@ Generate personalized assessment questions based on what this student wants asse
         total_xp = int(record.get("totalXp", 0)) + awarded
         state_after = xp_state(total_xp)
         level_up = None
-        email_result = {"sent": 0, "failed": [], "skipped": []}
-
         if state_after["level"] > state_before["level"]:
             level_up = {"previousLevel": state_before["level"], "newLevel": state_after["level"]}
-            email_result = self._send_level_up_emails(
-                profile,
-                state_before["level"],
-                state_after["level"],
-                total_xp,
-                notified_levels,
-            )
 
-        task_labels = {
-            "assessment": "Completed Assessment",
-            "advisorTask": "Completed Advisor Task",
-            "reflection": "Finished Reflection",
-            "improvement": "Daily Improvement Activity",
-        }
         stat_keys = {
             "assessment": "assessmentsCompleted",
+            "scoreImprovement": "assessmentsCompleted",
             "advisorTask": "tasksCompleted",
             "reflection": "reflectionsCompleted",
             "improvement": "improvementsCompleted",
+            "dailyLogin": "loginsCompleted",
         }
         stat_key = stat_keys.get(task_type)
         if stat_key:
@@ -728,30 +663,30 @@ Generate personalized assessment questions based on what this student wants asse
 
         activity_item = {
             "id": task_id,
+            "action": task_type,
             "taskType": task_type,
-            "label": task_labels.get(task_type, "Completed Task"),
+            "label": XP_TASK_LABELS.get(task_type, "XP earned"),
             "xp": awarded,
+            "level": state_after["level"],
             "createdAt": datetime.now().isoformat(timespec="seconds"),
         }
         activity = [activity_item] + [item for item in activity if item.get("id") != task_id]
         activity = activity[:25]
 
-        last_notification = record.get("lastNotification")
+        last_level_up = record.get("lastLevelUp")
         if level_up:
-            last_notification = {
+            last_level_up = {
                 "previousLevel": level_up["previousLevel"],
                 "newLevel": level_up["newLevel"],
-                "sent": email_result.get("sent", 0),
                 "createdAt": datetime.now().isoformat(timespec="seconds"),
             }
 
         record.update({
             "totalXp": total_xp,
             "completedTasks": sorted(completed),
-            "notifiedLevels": sorted(notified_levels),
             "stats": stats,
             "activity": activity,
-            "lastNotification": last_notification,
+            "lastLevelUp": last_level_up,
         })
         store[student_id] = record
         write_xp_store(store)
@@ -765,11 +700,10 @@ Generate personalized assessment questions based on what this student wants asse
             "previousState": state_before,
             "stats": stats,
             "activity": activity[:12],
-            "lastNotification": last_notification,
+            "history": activity[:12],
+            "lastLevelUp": last_level_up,
             "taskValues": XP_TASK_VALUES,
             "levelUp": level_up,
-            "email": email_result,
-            "emailConfig": email_config_status(),
         })
 
     def _handle_analyze(self, data: dict):
@@ -878,12 +812,6 @@ if __name__ == "__main__":
     os.chdir(ROOT)
     if not API_KEY:
         print("WARNING: DEEPSEEK_API_KEY not set in .env.local")
-    email_status = email_svc.verify_connection()
-    if email_status.get("ready"):
-        print(f"Gmail SMTP ready — sending as {email_status.get('fromAddress')}")
-    else:
-        print("WARNING: Gmail not configured.")
-        print("         Add EMAIL_USER and EMAIL_APP_PASSWORD to .env.local (see GMAIL_SETUP.md)")
     server = HTTPServer(("127.0.0.1", PORT), Handler)
     print(f"\n  ✦ Xedu Self-Assessment running at http://localhost:{PORT}\n")
     print("  Press Ctrl+C to stop.\n")

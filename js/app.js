@@ -16,8 +16,6 @@ const App = {
   voiceInputs: [
     { kind: "preStudentName", inputId: "student-name-input", buttonId: "student-name-voice-btn" },
     { kind: "preStudentEmail", inputId: "student-email-input", buttonId: "student-email-voice-btn" },
-    { kind: "preAdvisorEmails", inputId: "advisor-emails-input", buttonId: "advisor-emails-voice-btn" },
-    { kind: "preMeetingTranscript", inputId: "meeting-transcript-input", buttonId: "meeting-transcript-voice-btn" },
     { kind: "preSchoolName", inputId: "school-name-input", buttonId: "school-name-voice-btn" },
     { kind: "preDisadvantageNotes", inputId: "academic-disadvantage-notes", buttonId: "academic-disadvantage-notes-voice-btn" },
     { kind: "quiz", inputId: "quiz-input", buttonId: "quiz-voice-btn" },
@@ -77,8 +75,6 @@ const App = {
     [
       "student-name-input",
       "student-email-input",
-      "advisor-emails-input",
-      "meeting-transcript-input",
       "school-name-input",
       "academic-disadvantage-select",
       "academic-disadvantage-notes",
@@ -96,8 +92,6 @@ const App = {
     [
       { buttonId: "student-name-voice-btn", kind: "preStudentName" },
       { buttonId: "student-email-voice-btn", kind: "preStudentEmail" },
-      { buttonId: "advisor-emails-voice-btn", kind: "preAdvisorEmails" },
-      { buttonId: "meeting-transcript-voice-btn", kind: "preMeetingTranscript" },
       { buttonId: "school-name-voice-btn", kind: "preSchoolName" },
       { buttonId: "academic-disadvantage-notes-voice-btn", kind: "preDisadvantageNotes" },
     ].forEach(({ buttonId, kind }) => {
@@ -117,8 +111,6 @@ const App = {
       };
       set("student-name-input", profile.studentName);
       set("student-email-input", profile.studentEmail);
-      set("advisor-emails-input", (profile.advisorEmails || []).join(", "));
-      set("meeting-transcript-input", profile.meetingTranscript || "");
     } catch (e) {
       console.warn("Profile prefill skipped", e);
     }
@@ -192,14 +184,7 @@ const App = {
   getProfileFromInputs() {
     const studentName = document.getElementById("student-name-input")?.value.trim() || "";
     const studentEmail = document.getElementById("student-email-input")?.value.trim() || "";
-    const advisorEmailsRaw = document.getElementById("advisor-emails-input")?.value || "";
-    const advisorEmails = this.parseAdvisorEmails(advisorEmailsRaw);
-    const meetingTranscript = this.getMeetingTranscript();
-    return { studentName, studentEmail, advisorEmails, meetingTranscript };
-  },
-
-  getMeetingTranscript() {
-    return (document.getElementById("meeting-transcript-input")?.value || "").trim();
+    return { studentName, studentEmail };
   },
 
   validatePreAssessmentFields() {
@@ -216,15 +201,8 @@ const App = {
     if (!profile.studentName || profile.studentName.length < 2) {
       return "Please add the student full name before continuing.";
     }
-    if (!this.isValidEmail(profile.studentEmail)) {
-      return "Please enter a valid student email.";
-    }
-    if (!profile.advisorEmails.length) {
-      return "Please add at least one advisor email.";
-    }
-    const invalidAdvisor = profile.advisorEmails.find((email) => !this.isValidEmail(email));
-    if (invalidAdvisor) {
-      return `Advisor email is invalid: ${invalidAdvisor}`;
+    if (profile.studentEmail && !this.isValidEmail(profile.studentEmail)) {
+      return "Please enter a valid student email, or leave it blank.";
     }
     return null;
   },
@@ -238,19 +216,16 @@ const App = {
     const schoolName = document.getElementById("school-name-input")?.value.trim() || "";
     const disadvantage = document.getElementById("academic-disadvantage-select")?.value || "";
     const notes = document.getElementById("academic-disadvantage-notes")?.value.trim() || "";
-    const transcript = this.getMeetingTranscript();
 
     const profileError = this.validateProfile(profile);
     if (!profileError) {
       this.saveProfile(profile);
       this.quizAnswers.studentName = profile.studentName;
       this.quizAnswers.studentEmail = profile.studentEmail;
-      this.quizAnswers.advisorEmails = profile.advisorEmails.join(", ");
     }
     if (schoolName) this.quizAnswers.schoolName = schoolName;
     if (disadvantage) this.quizAnswers.academicDisadvantage = disadvantage;
     if (notes) this.quizAnswers.academicDisadvantageNotes = notes;
-    if (transcript) this.quizAnswers.meetingTranscript = transcript;
 
     this.hidePreAssessmentError();
     this.showQuizStep();
@@ -613,7 +588,6 @@ const App = {
     const schoolName = document.getElementById("school-name-input")?.value.trim() || "";
     const disadvantage = document.getElementById("academic-disadvantage-select")?.value || "";
     const notes = document.getElementById("academic-disadvantage-notes")?.value.trim() || "";
-    const transcript = this.getMeetingTranscript();
 
     // "Ask Xedu now" must stay available at any stage without hard blockers.
     const profileError = this.validateProfile(profile);
@@ -626,7 +600,6 @@ const App = {
     if (schoolName) this.quizAnswers.schoolName = schoolName;
     if (disadvantage) this.quizAnswers.academicDisadvantage = disadvantage;
     if (notes) this.quizAnswers.academicDisadvantageNotes = notes;
-    if (transcript) this.quizAnswers.meetingTranscript = transcript;
 
     this.returnPhase = returnPhase;
     this.updateChatBackButton();
@@ -800,7 +773,6 @@ ${weeklyTasks || "Not available"}`;
     const schoolName = payload.answers?.schoolName || "Not provided";
     const disadvantage = payload.answers?.academicDisadvantage || "Not provided";
     const disadvantageNotes = payload.answers?.academicDisadvantageNotes || "Not provided";
-    const meetingTranscript = payload.answers?.meetingTranscript || "Not provided";
     const qa = (payload.questions || [])
       .map((item) => `Q: ${item.question}\nA: ${item.answer}`)
       .join("\n\n");
@@ -813,9 +785,6 @@ Student profile context:
 School: ${schoolName}
 Academic disadvantages / barriers: ${disadvantage}
 Details: ${disadvantageNotes}
-
-Full advisor-student meeting transcript (primary evidence):
-${meetingTranscript}
 
 Student's answers:
 ${qa}
@@ -972,17 +941,19 @@ ${weeklyTasks || "Not provided"}`;
   async saveAssessmentTaskXp(formData, percent, badge) {
     if (typeof XP === "undefined") return;
     try {
+      const taskId = this.taskIdFor("assessment", {
+        focus: formData.assessmentFocus,
+        answers: formData.answers,
+        questions: formData.questions,
+        score: percent,
+      });
       const result = await XP.completeTask(
         "assessment",
-        this.taskIdFor("assessment", {
-          focus: formData.assessmentFocus,
-          answers: formData.answers,
-          questions: formData.questions,
-          score: percent,
-        }),
+        taskId,
         { score: percent },
         { showPopup: true }
       );
+      await XP.tryScoreImprovement(percent, taskId);
       if (badge) {
         badge.textContent = result.duplicate
           ? "Assessment XP already saved"
@@ -1008,15 +979,11 @@ ${weeklyTasks || "Not provided"}`;
       localStorage.removeItem(this.profileKey);
       const studentName = document.getElementById("student-name-input");
       const studentEmail = document.getElementById("student-email-input");
-      const advisorEmails = document.getElementById("advisor-emails-input");
-      const meetingTranscript = document.getElementById("meeting-transcript-input");
       const schoolInput = document.getElementById("school-name-input");
       const disadvantageSelect = document.getElementById("academic-disadvantage-select");
       const disadvantageNotes = document.getElementById("academic-disadvantage-notes");
       if (studentName) studentName.value = "";
       if (studentEmail) studentEmail.value = "";
-      if (advisorEmails) advisorEmails.value = "";
-      if (meetingTranscript) meetingTranscript.value = "";
       if (schoolInput) schoolInput.value = "";
       if (disadvantageSelect) disadvantageSelect.value = "";
       if (disadvantageNotes) disadvantageNotes.value = "";

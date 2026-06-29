@@ -168,9 +168,10 @@ ${weeklyTasks || "None"}`;
 
         if (checked && typeof XP !== "undefined") {
           try {
+            const taskType = listType === "weeklyTasks" ? "reflection" : "improvement";
             await XP.completeTask(
-              "improvement",
-              `improvement:${listType}:${index}:${this.hashString(item)}`,
+              taskType,
+              `${taskType}:${listType}:${index}:${this.hashString(item)}`,
               { listType, item },
               { showPopup: true }
             );
